@@ -1,2 +1,2 @@
-run_mode,matched_pairs,speakers,meetings,median_duration_s,total_paired_audio_hours,unique_transcripts,metadata_exclusions
-standard,2000,14,5,2.29998779296875,3.358265875445472,1671,1713
+protocol_version,run_mode,all_discovered_pairs,sampled_pairs,speakers,meetings,pairs_per_speaker_min,pairs_per_speaker_median,pairs_per_speaker_max,pairs_per_meeting_min,pairs_per_meeting_median,pairs_per_meeting_max,median_duration_s,total_paired_audio_hours,unique_transcripts,metadata_exclusions
+2.0,standard,10595,2000,21,18,56.0,112.0,214.0,98.0,113.0,114.0,2.30499267578125,3.340905779666371,1775,5006

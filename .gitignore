@@ -17,14 +17,15 @@ reports/
 *.zip
 
 # Dataset-derived or bulky exports that should not be redistributed
+MicCheck_results_protocol_v2_0/
 MicCheck_results/features.parquet
 MicCheck_results/paired_manifest.csv
 MicCheck_results/excluded_samples.csv
 MicCheck_results/audio_failures.csv
 MicCheck_results/counterfactual_results.csv
-MicCheck_results/figures/pair_*.png
-MicCheck_results/figures/counterfactual_*.png
+MicCheck_results/figures/pair_????????????????_wave_mel.png
+MicCheck_results/figures/pair_????????????????_spectra.png
+MicCheck_results/figures/counterfactual_????????????????.png
 
 # Packaging metadata
 *.egg-info/
-

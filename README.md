@@ -1,111 +1,146 @@
 # MicCheck
 
-**Measuring microphone-channel leakage in speech representations**
+**Measuring recording-condition information in lightweight speech representations**
 
-MicCheck is a reproducible, notebook-first study of how strongly acoustic
-features encode the recording channel, how that leakage affects downstream
-speech tasks, and whether normalization or invariant learning can reduce it.
-The experiment uses time-aligned headset and distant-microphone recordings
-from the AMI Meeting Corpus.
+MicCheck uses paired close-talk and distant-microphone recordings of the same
+speech events to measure recording-condition information in acoustic features.
+It tests whether that information harms cross-condition transfer, identifies
+which feature families carry the signal, compares source-only preprocessing
+with target-aware adaptation, and asks whether bringing paired recordings
+closer in embedding space actually removes recoverable condition information.
 
-![Task utility versus microphone leakage](MicCheck_results/figures/central_tradeoff.png)
+> **Core finding:** geometric pair alignment is not necessarily
+> representational invariance.
 
-## Main findings
+IHM and SDM differ in distance, room acoustics, reverberation, noise, placement,
+gain behavior, and hardware. MicCheck therefore studies **close-talk versus
+distant-microphone recording condition**. It does not isolate microphone
+hardware or establish a causal microphone effect.
 
-| Experiment | Result | Interpretation |
+## Protocol status
+
+| Component | Status |
+|---|---|
+| Committed tables and figures | **Protocol v1 results snapshot** from an actual completed run |
+| Current notebook methodology | **Protocol v2, pending rerun** |
+
+The committed numeric results were generated with the protocol documented in
+the current results snapshot. The notebook now includes balanced metadata
+sampling, waveform and feature-family ablations, meeting-held-out evaluation,
+clustered uncertainty, and standardized frozen-probe comparisons. Those
+improvements require a fresh run before v2 values can be reported.
+
+No committed CSV has been edited to imitate v2 output. The original mixed-
+protocol central trade-off figure remains available in the v1 results folder
+for provenance, but is intentionally not presented as a headline figure.
+
+## Existing v1 findings
+
+| Experiment | Observed v1 result | Scope |
 |---|---:|---|
-| Raw microphone probe | **98.65% balanced accuracy** | The selected acoustic features almost perfectly identify headset versus distant microphone audio. |
-| Speaker ID, same channel | **0.764 macro-F1** | Speaker identity is reasonably recoverable when train and test channels match. |
-| Speaker ID, cross channel | **0.300 macro-F1** | Performance collapses under a microphone change. |
-| Lexical classification, same channel | **0.769 macro-F1** | Three-word classification works well in-channel. |
-| Lexical classification, cross channel | **0.599 macro-F1** | Channel mismatch also harms lexical information. |
-| CMVN microphone probe | **0.958 balanced accuracy** | Standard normalization removes only a small part of channel information and can reduce task utility. |
-| CORAL cross-channel speaker ID | **0.500 macro-F1** | Unsupervised covariance alignment improves transfer, but assumes access to unlabeled target-channel features. |
-| Pair-invariant model, strongest setting | **0.729 task F1 / 0.920 mic probe** | Paired alignment preserves more task performance but does not eliminate channel leakage. |
+| Raw recording-condition probe | **98.65% balanced accuracy** | IHM versus SDM, held-out speakers |
+| Closed-set speaker-information probe, same condition | **0.764 macro-F1** | Known speakers, held-out utterance pairs |
+| Closed-set speaker-information probe, cross condition | **0.300 macro-F1** | Known speakers, held-out utterance pairs |
+| Small lexical probe, same condition | **0.769 macro-F1** | Three words in this run |
+| Small lexical probe, cross condition | **0.599 macro-F1** | Three words in this run |
+| MFCC-CMVN recording-condition probe | **95.8% balanced accuracy** | Only the cepstral portion was normalized |
+| CORAL cross-condition speaker probe | **0.500 macro-F1** | Target-aware UDA using unlabeled target-condition training data |
 
-These results support a narrow conclusion: in this AMI subset, microphone
-identity is highly recoverable from conventional acoustic summaries, and
-models trained on one channel generalize poorly to another. They do **not**
-establish a universal or causal claim about microphone bias.
+These results show strong recording-condition recoverability and weak
+cross-condition transfer in this particular subset. They do not establish a
+universal effect, demographic unfairness, or causality.
 
-## Experimental design
+## Pair alignment is not the same as channel invariance
+
+In the v1 alignment sweep, increasing the alignment weight from λ=0 to λ=1
+reduced mean matched-pair cosine distance from **0.131 to 0.028**, a **78.3%**
+reduction. Over the same endpoints, recording-condition probe accuracy changed
+only from **94.1% to 92.0%**, a reduction of about **2.1 percentage points**.
+
+The important observation is not that the representation became invariant. It
+is that matched recordings moved much closer while their recording condition
+remained highly decodable. The v2 notebook now evaluates pair distance and
+frozen-probe leakage separately for every λ.
+
+![Protocol-v1 paired-alignment sweep](MicCheck_results/figures/invariant_sweep.png)
+
+The filename and labels above are retained from the historical v1 artifact;
+the current notebook uses the more accurate term **pair-aligned**.
+
+## Study design
 
 ```text
-AMI Meeting Corpus
-       |
-       +-- IHM: individual headset microphone
-       +-- SDM: single distant microphone
-                   |
-          aligned utterance pairs
-                   |
-          acoustic feature extraction
-          (MFCC, deltas, pitch, energy,
-           spectral and voice-quality summaries)
-                   |
-       +-----------+--------------------+
-       |           |                    |
- microphone     downstream          mitigation
-   probe        task transfer      CMVN / CORAL /
-                across channels    paired invariance
+AMI paired speech events
+        |
+        +-- IHM: close-talk headset condition
+        +-- SDM: distant-microphone condition
+                         |
+              metadata-first pairing
+                         |
+       balanced sampling across meetings/speakers
+                         |
+             acoustic representations
+        +----------------+----------------+
+        |                |                |
+  condition probes   transfer probes   mitigation
+  feature ablations  speaker/lexical   source-only preprocessing
+  amplitude controls same/cross        CORAL target-aware UDA
+                                      paired alignment
+                         |
+            standardized frozen probes
+        condition accuracy vs cross-condition F1
 ```
 
-The notebook streams AMI through Hugging Face rather than committing or
-downloading the complete corpus. The reported standard run contains 2,000
-paired utterances from 14 speakers across 5 meetings. Splits are made by
-speaker before modeling to avoid speaker leakage between train and test.
+The v2 notebook makes the following comparisons explicit:
 
-## Results
+- **Channel recoverability:** can a probe identify IHM versus SDM?
+- **Cross-channel robustness:** how much does downstream performance change?
+- **Geometric alignment:** how close are matched embeddings?
+- **Representational leakage:** can a frozen probe still recover condition?
 
-### 1. Channel identity dominates the feature space
+## Selected v1 visual evidence
 
-The microphone probe reaches 98.65% balanced accuracy, and feature
-coefficients show which acoustic dimensions carry the strongest channel
-signal.
+### Recording-condition recoverability
 
-| Confusion matrix | Most channel-predictive features |
+| Confusion matrix | Most predictive acoustic features |
 |---|---|
-| ![Microphone confusion matrix](MicCheck_results/figures/microphone_confusion.png) | ![Microphone coefficients](MicCheck_results/figures/microphone_coefficients.png) |
+| ![V1 recording-condition confusion matrix](MicCheck_results/figures/microphone_confusion.png) | ![V1 recording-condition coefficients](MicCheck_results/figures/microphone_coefficients.png) |
 
-### 2. Channel mismatch harms downstream generalization
+### Cross-condition task transfer
 
-Models evaluated on the same microphone used for training perform much better
-than models evaluated on the paired recording from the other microphone.
-
-| Speaker identification | Lexical classification |
+| Closed-set speaker-information probe | Small lexical probe |
 |---|---|
-| ![Speaker identification across channels](MicCheck_results/figures/speaker_cross_channel.png) | ![Lexical classification across channels](MicCheck_results/figures/lexical_cross_channel.png) |
+| ![V1 speaker-information transfer](MicCheck_results/figures/speaker_cross_channel.png) | ![V1 small lexical transfer](MicCheck_results/figures/lexical_cross_channel.png) |
 
-### 3. Mitigation creates a utility–invariance trade-off
+### Exploratory counterfactual diagnostic
 
-CMVN and CORAL alter the representation statistically; the paired-invariant
-encoder explicitly pulls the two recordings of the same utterance together.
-No tested method makes the representation fully channel-invariant without a
-cost or an additional assumption.
-
-| Normalization and adaptation | Paired-invariance sweep |
+| Probability shift | Estimated spectral response |
 |---|---|
-| ![Normalization trade-off](MicCheck_results/figures/normalization_tradeoff.png) | ![Invariant objective sweep](MicCheck_results/figures/invariant_sweep.png) |
+| ![V1 counterfactual probability shifts](MicCheck_results/figures/counterfactual_probability.png) | ![V1 estimated recording-condition response](MicCheck_results/figures/estimated_channel_response.png) |
 
-![Representation before and after mitigation](MicCheck_results/figures/pca_before_after.png)
+Only three v1 counterfactual examples were available. This is a qualitative
+diagnostic, not quantitative or causal evidence.
 
-### 4. Counterfactual examples are exploratory
+## Run directly in Google Colab
 
-An estimated channel response is applied to a very small set of utterances to
-visualize how predictions can move when only the recording channel is
-perturbed. With only three examples, this section is a demonstration rather
-than quantitative evidence.
+The notebook is self-contained and does not require `requirements.txt` in
+Colab.
 
-| Probability shift | Estimated response |
-|---|---|
-| ![Counterfactual probability shifts](MicCheck_results/figures/counterfactual_probability.png) | ![Estimated channel response](MicCheck_results/figures/estimated_channel_response.png) |
+1. Download `MicCheck_AMI.ipynb` from this repository.
+2. Open [Google Colab](https://colab.research.google.com/) and upload it.
+3. Run all cells from top to bottom.
 
-## Reproduce the study
+The installation cell declares its dependencies directly. AMI is streamed
+through Hugging Face, selected audio is processed on demand, and the full
+corpus is not downloaded.
 
-Python 3.11 or 3.12 is recommended. From a terminal:
+## Run locally
+
+Python 3.11 or 3.12 is recommended:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/miccheck.git
-cd miccheck
+git clone https://github.com/ad-srvn/MicCheck.git
+cd MicCheck
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
@@ -119,64 +154,75 @@ On Windows PowerShell, activate the environment with:
 .venv\Scripts\Activate.ps1
 ```
 
-Run the notebook from top to bottom. Its configuration cell exposes three
-workload presets:
+The workload presets are:
 
-- `smoke`: a quick pipeline check with a small sample.
-- `standard`: the configuration used for the committed results.
-- `extended`: a larger, slower experiment for stronger estimates.
+- `smoke`: a quick pipeline check.
+- `standard`: up to 2,000 audio pairs.
+- `extended`: up to 5,000 audio pairs.
 
-The notebook writes generated artifacts under `results/` and creates a
-`MicCheck_results.zip` archive. Both are ignored by Git. Curated aggregate
-tables and publication-relevant figures are retained in `MicCheck_results/`.
+`MAX_PAIRS` limits expensive audio processing, not metadata discovery. The v2
+sampler discovers valid metadata pairs first, then deterministically samples
+round-robin across meeting–speaker groups.
+
+## What protocol v2 adds
+
+- Direct Colab dependency installation.
+- Protocol-version metadata in generated results.
+- Complete metadata pairing before deterministic balanced subset selection.
+- Raw, peak-normalized, and RMS-normalized waveform representations.
+- Predefined MFCC, delta, spectral, energy, pitch/voicing, and nuisance-removal
+  feature ablations.
+- Separate speaker-held-out and meeting-held-out recording-condition results.
+- Direction-specific closed-set speaker and small lexical probes.
+- Explicit MFCC-CMN and MFCC-CMVN terminology.
+- Separation of source-only methods from CORAL (UDA).
+- Identical frozen logistic-probe semantics for the central comparison.
+- Speaker- and meeting-cluster bootstrap intervals.
+- Separate automated assessments for geometric pair alignment and recoverable
+  condition information.
 
 ## Repository layout
 
 ```text
-miccheck/
-├── MicCheck_AMI.ipynb        # complete portable experiment
-├── MicCheck_results/
-│   ├── *.csv                 # aggregate metrics and intervals
-│   └── figures/              # figures used in this README
-├── requirements.txt          # runtime dependencies
-├── LICENSE                   # software license
+MicCheck/
+├── MicCheck_AMI.ipynb        # self-contained protocol-v2 notebook
+├── MicCheck_results/         # immutable protocol-v1 snapshot
+│   ├── *.csv                 # generated v1 aggregate results
+│   └── figures/              # generated v1 figures
+├── requirements.txt          # local runtime dependencies
+├── LICENSE
 └── README.md
 ```
 
-AMI audio, transcripts, per-utterance manifests, extracted features, local
-environments, and caches are intentionally excluded. Obtain and use AMI in
-accordance with its own terms; the MIT license in this repository applies only
-to the MicCheck code and documentation.
+Fresh runs write to `results/` and create a protocol-versioned archive. AMI
+audio, transcripts, per-utterance manifests, extracted feature matrices,
+caches, and local environments are intentionally excluded from Git.
 
-## Important limitations
+## Important limitations of the v1 snapshot
 
-- The standard run is small: 14 speakers and 5 meetings, with only 3 speakers
-  and 2 meetings represented in the test partition.
-- Meetings can appear in more than one partition even though speakers cannot.
-  A leave-one-meeting-out evaluation would test a stronger form of transfer.
-- Speaker identification is a closed-set probe, not a speaker-verification
-  benchmark.
-- The lexical experiment covers only `yeah`, `okay`, and `um`; its test set
-  contains 40 paired examples.
-- Confidence intervals use item-level bootstrap resampling, not a hierarchical
-  speaker- or meeting-level bootstrap.
-- CORAL is unsupervised domain adaptation and therefore uses unlabeled target-
-  channel features. It is not a source-only normalization method.
-- Points in the central trade-off plot come from related but not identical
-  protocols: normalization methods use cross-channel probes, while the
-  pair-invariant encoder is trained jointly for its downstream objective.
-- The counterfactual section contains only three examples.
+- It contains 2,000 pairs from 14 speakers and 5 meetings; the test partition
+  contains only 3 speakers and 2 meetings.
+- Meetings overlap across its speaker-grouped partitions.
+- Its speaker task is closed-set, not unseen-speaker identification or speaker
+  verification.
+- Its lexical probe contains only `yeah`, `okay`, and `um`, with 40 test pairs.
+- Its confidence intervals are item-level rather than cluster-level.
+- Its original central trade-off figure mixes frozen classical probes with a
+  jointly trained neural task head and is not directly comparable point by
+  point. The v2 notebook fixes this for future runs.
+- CORAL uses unlabeled target-condition training data and is not a source-only
+  baseline.
 
 ## Responsible interpretation
 
-Channel leakage means that a model can recover recording-device information
-from its input representation. It does not by itself prove demographic bias,
-unfair treatment, or causality. Report the corpus, microphone configuration,
-split policy, sample counts, uncertainty, and adaptation assumptions whenever
-using these results.
+Recording-condition leakage means that a model can recover condition
+information from its representation. It does not by itself prove demographic
+bias, unfair treatment, or causality. Report the corpus, condition contrast,
+split policy, cluster counts, uncertainty method, and adaptation assumptions
+whenever using these results.
 
 ## License
 
 MicCheck code and documentation are released under the [MIT License](LICENSE).
-The AMI Meeting Corpus is not redistributed by this repository and remains
-subject to its original license and usage terms.
+The AMI Meeting Corpus is not redistributed and remains subject to its own
+license and usage terms.

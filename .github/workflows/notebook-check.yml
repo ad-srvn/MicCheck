@@ -18,6 +18,7 @@ jobs:
       - name: Validate notebook JSON and Python cells
         run: |
           python - <<'PY'
+          import ast
           import json
           from pathlib import Path
 
@@ -29,7 +30,12 @@ jobs:
               if cell.get("cell_type") != "code":
                   continue
               source = "".join(cell.get("source", []))
-              compile(source, f"{path}:cell-{index}", "exec")
+              # IPython magics are valid notebook syntax but not Python AST.
+              python_source = "\n".join(
+                  line for line in source.splitlines()
+                  if not line.lstrip().startswith(("%", "!"))
+              )
+              ast.parse(python_source, filename=f"{path}:cell-{index}")
 
           print(f"Validated {path}")
           PY

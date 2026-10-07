@@ -1,0 +1,30 @@
+# Local environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
+.DS_Store
+
+# Downloaded datasets and generated working directories
+data/
+cache/
+miccheck_cache/
+results/
+artifacts/
+reports/
+*.zip
+
+# Dataset-derived or bulky exports that should not be redistributed
+MicCheck_results/features.parquet
+MicCheck_results/paired_manifest.csv
+MicCheck_results/excluded_samples.csv
+MicCheck_results/audio_failures.csv
+MicCheck_results/counterfactual_results.csv
+MicCheck_results/figures/pair_*.png
+MicCheck_results/figures/counterfactual_*.png
+
+# Packaging metadata
+*.egg-info/
+

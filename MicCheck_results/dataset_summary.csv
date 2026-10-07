@@ -1,0 +1,2 @@
+run_mode,matched_pairs,speakers,meetings,median_duration_s,total_paired_audio_hours,unique_transcripts,metadata_exclusions
+standard,2000,14,5,2.29998779296875,3.358265875445472,1671,1713
